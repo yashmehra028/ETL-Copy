@@ -1,6 +1,8 @@
 # 3D Models
 
-Last version with mock-up of services:
+v1.4 of the RB represents the most recent version of the prototype.
+
+Last version of sandwich with mock-up of services (slightly out of date):
 - Fiber bundles routed on top of RB, d=2mm (blue)
 - BV routed on top of power board, d=2.33mm (yellow)
 - DSS cables (temperature sensors) routed on top of PB, but can be moved depending on where the sensors eventually go. d=1mm (blue)
