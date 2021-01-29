@@ -16,6 +16,27 @@ colors = {
     14: 'green'
 }
 
+class three_vector:
+    def __init__(self, x, y, z):
+        self.x = x
+        self.y = y
+        self.z = z
+        self.r     = np.sqrt(x**2+y**2)
+        self.theta = np.arctan2(self.r, z)
+        self.eta   = -np.log(np.tan(self.theta/2))
+        self.phi   = np.arctan2(y, x)
+        
+    @classmethod
+    def fromEtaPhi(cls, eta, phi, z):
+        cls.eta = eta
+        cls.phi = phi
+        cls.z = z
+        cls.theta = 2*np.arctan(np.exp(cls.eta*(-1)))
+        cls.r = z*np.tan(cls.theta)
+        cls.x = cls.r*np.cos(cls.phi)
+        cls.y = cls.r*np.sin(cls.phi)
+        
+        return cls
 
 class Sensor(object):
     def __init__(self, height, width, x=0, y=0, deadspace=0.5, color='orange'):
