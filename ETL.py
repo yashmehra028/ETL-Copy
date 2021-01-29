@@ -5,6 +5,18 @@ import copy
 import numpy as np
 import pandas as pd
 
+from partition import *
+
+colors = {
+    3: 'cyan',
+    6: 'magenta',
+    7: 'yellow',
+    11: 'orange',
+    12: 'blue',
+    14: 'green'
+}
+
+
 class Sensor(object):
     def __init__(self, height, width, x=0, y=0, deadspace=0.5, color='orange'):
         '''
@@ -185,7 +197,7 @@ class Module(object):
         self.vay2 = [ s.ay2 for s in self.sensors ]
 
 class SuperModule(object):
-    def __init__(self, module, powerboard, readoutboard, x=0, y=0, n_modules=3, module_gap=0.5, orientation='above'):
+    def __init__(self, module, powerboard, readoutboard, x=0, y=0, n_modules=3, module_gap=0.5, orientation='above', color='b'):
         '''
         This consists of N modules together with a readout board and a power board.
         '''
@@ -197,6 +209,7 @@ class SuperModule(object):
         self.orientation = orientation
         self.module_gap = module_gap
         self.n_modules = n_modules
+        self.color = color
 
         self.setOutline()
 
@@ -226,9 +239,9 @@ class SuperModule(object):
         self.RB.move_by(0, (-1)*self.PB.width/2 if orientation=='above' else self.PB.width/2)
     
     @classmethod
-    def fromSuperModule(cls, supermodule, x=0, y=0, n_modules=3, module_gap=0.5, orientation='above'):
+    def fromSuperModule(cls, supermodule, x=0, y=0, n_modules=3, module_gap=0.5, orientation='above', color='b'):
         
-        return cls(supermodule._module, supermodule._PB, supermodule._RB, x=x, y=y, n_modules=n_modules, module_gap=module_gap, orientation=orientation)
+        return cls(supermodule._module, supermodule._PB, supermodule._RB, x=x, y=y, n_modules=n_modules, module_gap=module_gap, orientation=orientation, color=color)
 
     def setOutline(self):
         '''
@@ -263,7 +276,7 @@ class SuperModule(object):
         '''
         Returns a polygon that can be drawn with matplotlib
         '''
-        return plt.Polygon(self.outline, fill=None, closed=True, edgecolor='blue', linewidth=3)
+        return plt.Polygon(self.outline, closed=True, linewidth=3, edgecolor='black', facecolor=self.color, alpha=0.5)
 
     def getActiveArea(self):
         '''
@@ -290,6 +303,7 @@ class Dee(object):
         self.area    = (r_outer**2 - r_inner**2)*np.pi/2
         self.z       = z
         self.color   = color
+        self.supermodules = []
 
     def populate(self, supermodule, edge_x=6, shift_x=0, shift_y=0, flavors=[3,6,7], center_RB=False, center_PB=False):
         '''
@@ -338,9 +352,21 @@ class Dee(object):
         self.module_matrix = []
         self.slots_flat = []
         for i, row in enumerate(self.slot_matrix):
+            # maximum length
             length = sum(row)
+
+            # use the partition function to get the composition of RB flavors
             partition = getPartition(length, flavors=flavors)
             covered = sum(partition)
+
+            x_shift = 0
+            for k, n_mod in enumerate(partition):
+                tmp = copy.deepcopy(SuperModule.fromSuperModule(supermodule, n_modules=n_mod, module_gap=supermodule.module_gap, orientation=supermodule.orientation, color=colors[n_mod]))
+                tmp.move_by(self.slots[i][0].x1-tmp.x1 + x_shift, self.slots[i][0].y1-tmp.y1)
+                x_shift += tmp.height + tmp.module_gap
+                self.supermodules.append(tmp)
+                #break
+                #self.slots[i][0].x1
 
             for j in range(length):
                 self.slots[i][j].covered = True if j<covered else False
@@ -356,6 +382,34 @@ class Dee(object):
 
         return
 
+    def fromCenters(self, centers, sensor):
+        '''
+        this is useful for old layouts / tilings
+        
+        '''
+        # loop over centers
+        self.sensors = []
+        for x,y in centers:
+            tmp = copy.deepcopy(sensor)
+            tmp.move_to(x,y)
+            self.sensors.append(tmp)
+
+        # manually get the corners
+        self.vax1 = []
+        self.vax2 = []
+        self.vay1 = []
+        self.vay2 = []
+
+        for sen in self.sensors:
+            self.vax1 += [sen.ax1]
+            self.vax2 += [sen.ax2]
+            self.vay1 += [sen.ay1]
+            self.vay2 += [sen.ay2]
+
+        self.vax1 = np.array(self.vax1)
+        self.vax2 = np.array(self.vax2)
+        self.vay1 = np.array(self.vay1)
+        self.vay2 = np.array(self.vay2)
     
     def getAllCorners(self):
         self.vax1 = []
@@ -382,63 +436,6 @@ class Dee(object):
         ((m.vax1 < x) & (x < m.vax2) & (m.vay1 < y) & (y < m.vay2)).any()
         '''
         return ((self.vax1 < x) & (x < self.vax2) & (self.vay1 < y) & (y < self.vay2)).any()
-
-
-#def getPartition(length):
-#    '''
-#    This is an old function. Should get updated
-#    '''
-#    tmp = length
-#    nSeven = 0
-#    nSix = 0
-#    nThree = 0
-#    length = length - nThree*3 # new
-#    nSevenMax = int(length/7)
-#    for i in reversed(range(nSevenMax+1)):
-#        if (length-i*7)%3==0 and (length-i*7>=0 or length==7):
-#            length = length-i*7
-#            nSeven = i
-#            break
-#    nSix = int(length/6) # new
-#    if length%6>0:
-#        nThree += 1
-#    if length == 11: 
-#        nSeven+=1
-#        nSix-=1 # that's after subtraction
-#    column = [7]*nSeven + [6]*nSix + [3]*nThree
-#    #if not sum(column) == tmp: print ("Something went wrong")
-#    return column
-
-def getPartition(length, flavors=[3,6,7]):
-    '''
-    This is an old function. Should get updated
-    '''
-    tmp = length
-    multiplicities = [0]*len(flavors)
-
-    nLargestMax = int(length/flavors[-1])
-    for i in reversed(range(nLargestMax+1)):
-        if ((length-i*flavors[-1])%flavors[0]==0 or (length-i*flavors[-1])%flavors[-2]==0) and (length-i*flavors[-1]>=0 or length==flavors[-1]):
-            length = length-i*flavors[-1]
-            multiplicities[-1] = i
-            break
-            
-    nLargestMax = int(length/flavors[-2])
-    for i in reversed(range(nLargestMax+1)):
-        if (length-i*flavors[-2])%flavors[0]==0 and (length-i*flavors[-2]>=0 or length==flavors[-2]):
-            length = length-i*flavors[-2]
-            multiplicities[-2] = i
-            break
-            
-    nLargestMax = int(length/flavors[0])
-    for i in reversed(range(nLargestMax+1)):
-        if (length-i*flavors[0]>=0 or length==flavors[0]):
-            length = length-i*flavors[0]
-            multiplicities[0] = i
-            break
-    
-    column = [flavors[-1]]*multiplicities[-1] + [flavors[-2]]*multiplicities[-2] + [flavors[0]]*multiplicities[0]
-    return column
 
 
 if __name__ == "__main__":
