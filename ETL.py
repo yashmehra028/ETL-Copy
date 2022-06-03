@@ -1,3 +1,4 @@
+from turtle import color
 import matplotlib.pyplot as plt
 import math
 import copy
@@ -6,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from partition import *
+
 
 colors = {
     3: 'cyan',
@@ -39,9 +41,128 @@ class three_vector:
 
         return cls
 
-# class Pixel:
-#     def __init__(self,outline):
-#         pass
+
+class Pixel:
+    def __init__(self, x, y, height, width):
+        self.x = x
+        self.y = y
+        self.height = height
+        self.width = width
+
+    def setOutline(self):
+        self.x1 = self.x - self.height/2
+        self.x2 = self.x + self.height/2
+        self.y1 = self.y - self.width/2
+        self.y2 = self.y + self.width/2
+        self.outline = [
+            (self.x1, self.y2),
+            (self.x2, self.y2),
+            (self.x2, self.y1),
+            (self.x1, self.y1)
+        ]
+
+    def getPolygon(self):
+        return plt.Polygon(self.outline, color='blue', closed=True, edgecolor='black', alpha=0.6)
+
+
+class Sensor2(object):
+    def __init__(self, height, width, x=0, y=0, deadspace1=0.3, deadspace2=0.5, color='orange'):
+        '''
+        Create a sensor object with height (in x) and width (in y). x and y define the position of the center
+        '''
+        self.height = height
+        self.width = width
+        self.x = x
+        self.y = y
+        self.color = color
+        self.deadspace1 = deadspace1
+        self.deadspace2 = deadspace2
+
+        self.setOutline()
+
+    def setOutline(self):
+        '''
+        set the outline for the polygon, but also the coordinates of the corners in an easily accessible way.
+        x1 < x2,
+        y1 < y2
+        so (x1, y1) is the lower left corner.
+        '''
+        self.x1 = self.x - self.height/2.
+        self.x2 = self.x + self.height/2.
+        self.y1 = self.y - self.width/2.
+        self.y2 = self.y + self.width/2.
+
+        self.outline = [
+            [self.x1, self.y2],
+            [self.x2, self.y2],
+            [self.x2, self.y1],
+            [self.x1, self.y1]
+        ]
+
+    def setActiveArea(self):
+        self.ax1 = self.x - self.height/2. + self.deadspace1
+        self.ax2 = self.x + self.height/2. - self.deadspace1
+        self.ay1 = self.y - self.width/2. + self.deadspace2
+        self.ay2 = self.y + self.width/2. - self.deadspace1
+
+        self.activeArea = [
+            [self.ax1, self.ay2],
+            [self.ax2, self.ay2],
+            [self.ax2, self.ay1],
+            [self.ax1, self.ay1]
+        ]
+
+    def get_pixel_centers(self, m, n, gap):
+
+        self.n_pixels = m*n
+        self.x_pixel_size = (abs(self.ax2-self.ax1)-(m-1)*gap)/m
+        self.y_pixel_size = (abs(self.ay2-self.ay1)-(n-1)*gap)/n
+        self.x0 = self.ax1
+        self.y0 = self.ay2
+        self.centers_new_system = []
+        self.centers_pixels = []
+
+        initial_y = -1*(self.y_pixel_size/2)
+
+        for _ in range(n):
+            initial_x = 1*(self.x_pixel_size/2)
+            for _ in range(m):
+                coor_new = [initial_x, initial_y]
+                coor_needed = [initial_x+self.x0, initial_y+self.y0]
+                self.centers_pixels.append(coor_needed)
+                self.centers_new_system.append(coor_new)
+                initial_x += (gap + self.x_pixel_size)
+
+            initial_y -= (gap + self.y_pixel_size)
+
+    def getPixelsOutline(self):
+        self.pixels = []
+        for center in self.centers_pixels:
+            pixel = Pixel(
+                x=center[0], y=center[1], height=self.x_pixel_size, width=self.y_pixel_size)
+            pixel.setOutline()
+            self.pixels.append(pixel)
+
+    def getActiveArea(self):
+        return abs((self.ax2-self.ax1)*(self.ay2-self.ay1))
+
+    def move_to(self, x, y):
+        self.x = x
+        self.y = y
+        self.setOutline()
+        self.setActiveArea()
+
+    def move_by(self, x, y):
+        self.x = self.x + x
+        self.y = self.y + y
+        self.setOutline()
+        self.setActiveArea()
+
+    def getPolygon(self, active=False):
+        '''
+        Returns a polygon that can be drawn with matplotlib
+        '''
+        return plt.Polygon(self.outline if not active else self.activeArea, closed=True, edgecolor='black', facecolor=self.color if not active else 'gray', alpha=0.5)
 
 
 class Sensor(object):
@@ -90,7 +211,7 @@ class Sensor(object):
             [self.ax1, self.ay1]
         ]
 
-    def Active_area_pixels(self, m, n, gap):
+    def get_pixel_centers(self, m, n, gap):
 
         self.n_pixels = m*n
         self.x_pixel_size = (abs(self.ax2-self.ax1)-(m-1)*gap)/m
@@ -99,7 +220,6 @@ class Sensor(object):
         self.y0 = self.y1
         self.centers_new_system = []
         self.centers_pixels = []
-        # return 10
 
         initial_x = -1*(self.deadspace + self.x_pixel_size/2)
 
@@ -113,6 +233,14 @@ class Sensor(object):
                 initial_y += (gap + self.y_pixel_size)
 
             initial_x -= (gap + self.x_pixel_size)
+
+    def getPixelsOutline(self):
+        self.pixels = []
+        for center in self.centers_pixels:
+            pixel = Pixel(
+                x=center[0], y=center[1], height=self.x_pixel_size, width=self.y_pixel_size)
+            pixel.setOutline()
+            self.pixels.append(pixel)
 
     def getActiveArea(self):
         return abs((self.ax2-self.ax1)*(self.ay2-self.ay1))
@@ -471,10 +599,47 @@ class Dee(object):
         self.vay2 = []
 
         for sen in self.sensors:
+
             self.vax1 += [sen.ax1]
             self.vax2 += [sen.ax2]
             self.vay1 += [sen.ay1]
             self.vay2 += [sen.ay2]
+
+        self.vax1 = np.array(self.vax1)
+        self.vax2 = np.array(self.vax2)
+        self.vay1 = np.array(self.vay1)
+        self.vay2 = np.array(self.vay2)
+
+    def fromCenters2(self, centers, sensor, m_sens, n_sens, gap_pixel):
+        '''
+        this is useful for old layouts / tilings
+
+        '''
+        # loop over centers
+        self.m_sens = m_sens
+        self.n_sens = n_sens
+        self.gap_pixel = gap_pixel
+        self.sensors = []
+        for x, y in centers:
+            tmp = copy.deepcopy(sensor)
+            tmp.move_to(x, y)
+            self.sensors.append(tmp)
+
+        # manually get the corners
+        self.vax1 = []
+        self.vax2 = []
+        self.vay1 = []
+        self.vay2 = []
+
+        for sen in self.sensors:
+            sen.get_pixel_centers(
+                m=self.m_sens, n=self.n_sens, gap=self.gap_pixel)
+            sen.getPixelsOutline()
+            for pixel in sen.pixels:
+                self.vax1 += [pixel.x1]
+                self.vax2 += [pixel.x2]
+                self.vay1 += [pixel.y1]
+                self.vay2 += [pixel.y2]
 
         self.vax1 = np.array(self.vax1)
         self.vax2 = np.array(self.vax2)
