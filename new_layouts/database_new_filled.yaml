@@ -1,4 +1,4 @@
-TDR:
+new:
   disk1:
     back:
     - !!python/tuple
