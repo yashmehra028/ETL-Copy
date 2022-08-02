@@ -576,7 +576,7 @@ class Dee(object):
                 self.module_matrix.append(
                     [1]*covered + [-1]*(length-covered) + [0]*(len(row)-length))
 
-        self.getAllCorners()
+        self.getAllCorners2(2, 2, 0.1)
 
         return
 
@@ -666,6 +666,33 @@ class Dee(object):
         self.vay1 = np.array(self.vay1)
         self.vay2 = np.array(self.vay2)
 
+    def getAllCorners2(self, m_sens, n_sens, gap_pixel):
+        self.vax1 = []
+        self.vax2 = []
+        self.vay1 = []
+        self.vay2 = []
+        self.m_sens = m_sens
+        self.n_sens = n_sens
+        self.gap_pixel = gap_pixel
+
+        for slot in self.slots_flat:
+            if slot.covered:
+                for mod in slot.modules:
+                    for sen in mod.sensors:
+                        sen.get_pixel_centers(
+                            m=self.m_sens, n=self.n_sens, gap=self.gap_pixel)
+                        sen.getPixelsOutline()
+                        for pix in sen.pixels:
+                            self.vax1 += [pix.x1]
+                            self.vax2 += [pix.x2]
+                            self.vay1 += [pix.y1]
+                            self.vay2 += [pix.y2]
+
+        self.vax1 = np.array(self.vax1)
+        self.vax2 = np.array(self.vax2)
+        self.vay1 = np.array(self.vay1)
+        self.vay2 = np.array(self.vay2)
+
     def intersect(self, x, y):
         '''
         ((m.vax1 < x) & (x < m.vax2) & (m.vay1 < y) & (y < m.vay2)).any()
@@ -700,20 +727,44 @@ if __name__ == "__main__":
     # for row in D.slot_matrix:
     #    print ((' '.join([ str(x) for x in row])).replace('1','X').replace('0', '.'))
 
-    for row in D.module_matrix:
-        print((' '.join([str(x) for x in row])).replace(
-            '-1', 'O').replace('0', '.').replace('1', 'X'))
+    inner = plt.Circle((0, 0), 315, fill=None, edgecolor='r')
+    outer = plt.Circle((0, 0), 1185, fill=None, edgecolor='r')
 
-    covered_area = sum([slot.getActiveArea() for slot in D.slots_flat])
-    available_slots = sum([sum(row) for row in D.slot_matrix])
-    filled_slots = sum([sum([x for x in row if x == 1])
-                       for row in D.module_matrix])
+    plt.rcParams['figure.figsize'] = [15, 15]
 
-    print("Number of available slots:", available_slots)
-    print("Number of used slots (= number of modules):", filled_slots)
-    print("The maximum fill factor is:", round(covered_area/D.area, 3))
+    plt.gca().add_patch(inner)
+    plt.gca().add_patch(outer)
 
-    print("Testing if a particle at 10,10 intersects any of the sensors (it shouldn't):",
-          D.intersect(10, 10))
-    print("Testing if a particle at 10,500 intersects any of the sensors:",
-          D.intersect(10, 500))
+    i = 0
+    for row in D.slots:
+        for sm in row:
+            for mod in sm.modules:
+                for sen in mod.sensors:
+                    for pix in sen.pixels:
+                        plt.gca().add_patch(pix.getPolygon())
+
+    # for row in D.slots:
+    #     for sm in row:
+    #         for mod in sm.modules:
+    #             for sen in mod.sensors:
+    #                 plt.gca().add_patch(sen.getPolygon())
+
+    plt.axis('scaled')
+    plt.show()
+    # for row in D.module_matrix:
+    #     print((' '.join([str(x) for x in row])).replace(
+    #         '-1', 'O').replace('0', '.').replace('1', 'X'))
+
+    # covered_area = sum([slot.getActiveArea() for slot in D.slots_flat])
+    # available_slots = sum([sum(row) for row in D.slot_matrix])
+    # filled_slots = sum([sum([x for x in row if x == 1])
+    #                    for row in D.module_matrix])
+
+    # print("Number of available slots:", available_slots)
+    # print("Number of used slots (= number of modules):", filled_slots)
+    # print("The maximum fill factor is:", round(covered_area/D.area, 3))
+
+    # print("Testing if a particle at 10,10 intersects any of the sensors (it shouldn't):",
+    #       D.intersect(10, 10))
+    # print("Testing if a particle at 10,500 intersects any of the sensors:",
+    #       D.intersect(10, 500))
