@@ -341,7 +341,13 @@ class Module(object):
         '''
         Returns a polygon that can be drawn with matplotlib
         '''
-        return plt.Polygon(self.outline, fill=None, closed=True, edgecolor='black', linewidth=2)
+        return plt.Polygon(self.outline, fill=True, closed=True, edgecolor='black', linsewidth=2)
+
+    def getPolygon2(self, color='blue'):
+        '''
+        Returns a polygon that can be drawn with matplotlib
+        '''
+        return plt.Polygon(self.outline, color=color, closed=True, edgecolor='black', alpha=0.6)
 
     def populate(self, sensor):
         for ix in range(self.n_sensor_x):
