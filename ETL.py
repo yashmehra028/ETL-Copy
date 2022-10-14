@@ -158,11 +158,11 @@ class Sensor2(object):
         self.setOutline()
         self.setActiveArea()
 
-    def getPolygon(self, active=False):
+    def getPolygon(self, color, active=False):
         '''
         Returns a polygon that can be drawn with matplotlib
         '''
-        return plt.Polygon(self.outline if not active else self.activeArea, closed=True, edgecolor='black', facecolor=self.color if not active else 'gray', alpha=0.5)
+        return plt.Polygon(self.outline if not active else self.activeArea, closed=True, edgecolor='black', facecolor=self.color if not active else 'gray', alpha=0.5,color=color)
 
 
 class Sensor(object):
