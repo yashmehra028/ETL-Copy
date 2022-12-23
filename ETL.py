@@ -41,7 +41,7 @@ class three_vector:
 
         return cls
 
-
+# defining a new class pixel to account for the pixels in the sensors
 class Pixel:
     def __init__(self, x, y, height, width):
         self.x = x
@@ -64,7 +64,7 @@ class Pixel:
     def getPolygon(self):
         return plt.Polygon(self.outline, color='blue', closed=True, edgecolor='black', alpha=0.6)
 
-
+# defining new sensor which will have the coordinates of the pixles defined in it
 class Sensor2(object):
     def __init__(self, height, width, x=0, y=0, deadspace1=0.3, deadspace2=0.5, color='orange'):
         '''
