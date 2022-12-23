@@ -1,3 +1,3 @@
 # ETL-Copy
 
-Repository to make modifications to ETL original repo. Added more functionality and made plots for different configurations.
+Repository to make modifications to ETL original project. Added more functionality to generate useful metadata for different configurations. 
